@@ -16,7 +16,7 @@ Download [SDL 2](https://www.libsdl.org/download-2.0.php) development libraries 
     - cmake .. && cmake --build .
 4. copy :
     - 'build\libcef_dll\Debug\libcef_dll_wrapper.lib' to '$project_dir\vendor\cef\lib'
-    - 'Debug\*' & 'Resources' to '$project_dir\vendor\cef'
+    - 'Debug\\*' & 'Resources' to '$project_dir\vendor\cef'
 
 ## Build this project
 1. cd $project_dir

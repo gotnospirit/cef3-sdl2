@@ -54,8 +54,8 @@ class BrowserClient :
     public CefLifeSpanHandler
 {
 public:
-    BrowserClient(CefRefPtr<CefRenderHandler> ptr)
-        : handler(ptr)
+    BrowserClient(CefRefPtr<CefRenderHandler> ptr) :
+        handler(ptr)
     {
     }
 
@@ -113,6 +113,28 @@ private:
 
     IMPLEMENT_REFCOUNTING(BrowserClient);
 };
+
+CefBrowserHost::MouseButtonType translateMouseButton(SDL_MouseButtonEvent const &e)
+{
+    CefBrowserHost::MouseButtonType result;
+    switch (e.button)
+    {
+        case SDL_BUTTON_LEFT:
+        case SDL_BUTTON_X1:
+            result = MBT_LEFT;
+            break;
+
+        case SDL_BUTTON_MIDDLE:
+            result = MBT_MIDDLE;
+            break;
+
+        case SDL_BUTTON_RIGHT:
+        case SDL_BUTTON_X2:
+            result = MBT_RIGHT;
+            break;
+    }
+    return result;
+}
 
 int main(int argc, char * argv[])
 {
@@ -218,6 +240,39 @@ int main(int argc, char * argv[])
                         case SDL_QUIT:
                             browser->GetHost()->CloseBrowser(false);
                             break;
+
+                        case SDL_MOUSEMOTION:
+                            {
+                                CefMouseEvent event;
+                                // relative to screen!
+                                event.x = e.motion.x;
+                                event.y = e.motion.y;
+
+                                browser->GetHost()->SendMouseMoveEvent(event, false);
+                            }
+                            break;
+
+                        case SDL_MOUSEBUTTONUP:
+                            {
+                                CefMouseEvent event;
+                                // relative to screen!
+                                event.x = e.button.x;
+                                event.y = e.button.y;
+
+                                browser->GetHost()->SendMouseClickEvent(event, translateMouseButton(e.button), true, 1);
+                            }
+                            break;
+
+                        case SDL_MOUSEBUTTONDOWN:
+                            {
+                                CefMouseEvent event;
+                                // relative to screen!
+                                event.x = e.button.x;
+                                event.y = e.button.y;
+
+                                browser->GetHost()->SendMouseClickEvent(event, translateMouseButton(e.button), false, 1);
+                            }
+                            break;
                     }
                 }
 
@@ -246,8 +301,7 @@ int main(int argc, char * argv[])
     }
 
     SDL_DestroyWindow(window);
+    SDL_Quit();
 
-	SDL_Quit();
-
-	return 0;
+    return 0;
 }
