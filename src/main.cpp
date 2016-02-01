@@ -10,6 +10,8 @@
 #include <cef_life_span_handler.h>
 #include <wrapper/cef_helpers.h>
 
+#include "sdl_keyboard_utils.h"
+
 class RenderHandler :
     public CefRenderHandler
 {
@@ -267,6 +269,32 @@ int main(int argc, char * argv[])
                         case SDL_QUIT:
                             shutdown = true;
                             browser->GetHost()->CloseBrowser(false);
+                            break;
+
+                        case SDL_KEYDOWN:
+                            {
+                                CefKeyEvent event;
+                                event.modifiers = getKeyboardModifiers(e.key.keysym.mod);
+                                event.windows_key_code = getWindowsKeyCode(e.key.keysym);
+
+                                event.type = KEYEVENT_RAWKEYDOWN;
+                                browser->GetHost()->SendKeyEvent(event);
+
+                                event.type = KEYEVENT_CHAR;
+                                browser->GetHost()->SendKeyEvent(event);
+                            }
+                            break;
+
+                        case SDL_KEYUP:
+                            {
+                                CefKeyEvent event;
+                                event.modifiers = getKeyboardModifiers(e.key.keysym.mod);
+                                event.windows_key_code = getWindowsKeyCode(e.key.keysym);
+
+                                event.type = KEYEVENT_KEYUP;
+
+                                browser->GetHost()->SendKeyEvent(event);
+                            }
                             break;
 
                         case SDL_WINDOWEVENT:
