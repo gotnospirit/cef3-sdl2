@@ -274,6 +274,31 @@ int main(int argc, char * argv[])
                                     renderHandler->resize(e.window.data1, e.window.data2);
                                     browser->GetHost()->WasResized();
                                     break;
+
+                                case SDL_WINDOWEVENT_FOCUS_GAINED:
+                                    browser->GetHost()->SetFocus(true);
+                                    break;
+
+                                case SDL_WINDOWEVENT_FOCUS_LOST:
+                                    browser->GetHost()->SetFocus(false);
+                                    break;
+
+                                case SDL_WINDOWEVENT_HIDDEN:
+                                case SDL_WINDOWEVENT_MINIMIZED:
+                                    browser->GetHost()->SetWindowVisibility(false);
+                                    browser->GetHost()->WasHidden(true);
+                                    break;
+
+                                case SDL_WINDOWEVENT_SHOWN:
+                                case SDL_WINDOWEVENT_RESTORED:
+                                    browser->GetHost()->SetWindowVisibility(true);
+                                    browser->GetHost()->WasHidden(false);
+                                    break;
+
+                                case SDL_WINDOWEVENT_CLOSE:
+                                    e.type = SDL_QUIT;
+                                    SDL_PushEvent(&e);
+                                    break;
                             }
                             break;
 
