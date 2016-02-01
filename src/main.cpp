@@ -14,11 +14,21 @@ class RenderHandler :
     public CefRenderHandler
 {
 public:
-    RenderHandler(int w, int h, SDL_Texture * texture) :
+    RenderHandler(SDL_Renderer * renderer, int w, int h) :
         width(w),
         height(h),
-        texture(texture)
+        renderer(renderer)
     {
+        texture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_UNKNOWN, SDL_TEXTUREACCESS_STREAMING, w, h);
+    }
+
+    ~RenderHandler()
+    {
+        if (texture)
+        {
+            SDL_DestroyTexture(texture);
+        }
+        renderer = nullptr;
     }
 
     bool GetViewRect(CefRefPtr<CefBrowser> browser, CefRect &rect)
@@ -35,15 +45,33 @@ public:
             int texture_pitch = 0;
 
             SDL_LockTexture(texture, 0, (void **)&texture_data, &texture_pitch);
-            memcpy(texture_data, buffer, texture_pitch * h);
+            memcpy(texture_data, buffer, w * h * 4);
             SDL_UnlockTexture(texture);
         }
+    }
+
+    void resize(int w, int h)
+    {
+        if (texture)
+        {
+            SDL_DestroyTexture(texture);
+        }
+
+        texture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_UNKNOWN, SDL_TEXTUREACCESS_STREAMING, w, h);
+        width = w;
+        height = h;
+    }
+
+    void render()
+    {
+        SDL_RenderCopy(renderer, texture, NULL, NULL);
     }
 
 private:
     int width;
     int height;
-    SDL_Texture * texture;
+    SDL_Renderer * renderer = nullptr;
+    SDL_Texture * texture = nullptr;
 
     IMPLEMENT_REFCOUNTING(RenderHandler);
 };
@@ -195,7 +223,7 @@ int main(int argc, char * argv[])
     int width = 800;
     int height = 600;
 
-    auto window = SDL_CreateWindow("Render CEF with SDL", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, width, height, SDL_WINDOW_SHOWN);
+    auto window = SDL_CreateWindow("Render CEF with SDL", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, width, height, SDL_WINDOW_RESIZABLE);
     if (window)
     {
         auto renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC);
@@ -203,9 +231,7 @@ int main(int argc, char * argv[])
         {
             SDL_Event e;
 
-            SDL_Texture * texture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_UNKNOWN, SDL_TEXTUREACCESS_STREAMING, width, height);
-
-            CefRefPtr<CefRenderHandler> renderHandler = new RenderHandler(width, height, texture);
+            CefRefPtr<RenderHandler> renderHandler = new RenderHandler(renderer, width, height);
 
             // create browser-window
             CefRefPtr<CefBrowser> browser;
@@ -241,10 +267,20 @@ int main(int argc, char * argv[])
                             browser->GetHost()->CloseBrowser(false);
                             break;
 
+                        case SDL_WINDOWEVENT:
+                            switch (e.window.event)
+                            {
+                                case SDL_WINDOWEVENT_SIZE_CHANGED:
+                                    renderHandler->resize(e.window.data1, e.window.data2);
+                                    browser->GetHost()->WasResized();
+                                    break;
+                            }
+                            break;
+
                         case SDL_MOUSEMOTION:
                             {
                                 CefMouseEvent event;
-                                // relative to screen!
+                                // relative to window!
                                 event.x = e.motion.x;
                                 event.y = e.motion.y;
 
@@ -255,7 +291,7 @@ int main(int argc, char * argv[])
                         case SDL_MOUSEBUTTONUP:
                             {
                                 CefMouseEvent event;
-                                // relative to screen!
+                                // relative to window!
                                 event.x = e.button.x;
                                 event.y = e.button.y;
 
@@ -282,8 +318,7 @@ int main(int argc, char * argv[])
                 // render
                 SDL_RenderClear(renderer);
 
-                // ...
-                SDL_RenderCopy(renderer, texture, NULL, NULL);
+                renderHandler->render();
 
                 // Update screen
                 SDL_RenderPresent(renderer);
@@ -295,7 +330,6 @@ int main(int argc, char * argv[])
 
             CefShutdown();
 
-            SDL_DestroyTexture(texture);
             SDL_DestroyRenderer(renderer);
         }
     }
