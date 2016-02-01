@@ -280,7 +280,6 @@ int main(int argc, char * argv[])
                         case SDL_MOUSEMOTION:
                             {
                                 CefMouseEvent event;
-                                // relative to window!
                                 event.x = e.motion.x;
                                 event.y = e.motion.y;
 
@@ -291,7 +290,6 @@ int main(int argc, char * argv[])
                         case SDL_MOUSEBUTTONUP:
                             {
                                 CefMouseEvent event;
-                                // relative to window!
                                 event.x = e.button.x;
                                 event.y = e.button.y;
 
@@ -302,11 +300,29 @@ int main(int argc, char * argv[])
                         case SDL_MOUSEBUTTONDOWN:
                             {
                                 CefMouseEvent event;
-                                // relative to screen!
                                 event.x = e.button.x;
                                 event.y = e.button.y;
 
                                 browser->GetHost()->SendMouseClickEvent(event, translateMouseButton(e.button), false, 1);
+                            }
+                            break;
+
+                        case SDL_MOUSEWHEEL:
+                            {
+                                int delta_x = e.wheel.x;
+                                int delta_y = e.wheel.y;
+
+                                if (SDL_MOUSEWHEEL_FLIPPED == e.wheel.direction)
+                                {
+                                    delta_y *= -1;
+                                }
+                                else
+                                {
+                                    delta_x *= -1;
+                                }
+
+                                CefMouseEvent event;
+                                browser->GetHost()->SendMouseWheelEvent(event, delta_x, delta_y);
                             }
                             break;
                     }
