@@ -256,14 +256,16 @@ int main(int argc, char * argv[])
                 // browser->GetHost()->SendMouseWheelEvent(...);
             }
 
+            bool shutdown = false;
             while (!browserClient->closeAllowed())
             {
                 // send events to browser
-                while (SDL_PollEvent(&e) != 0)
+                while (!shutdown && SDL_PollEvent(&e) != 0)
                 {
                     switch (e.type)
                     {
                         case SDL_QUIT:
+                            shutdown = true;
                             browser->GetHost()->CloseBrowser(false);
                             break;
 
