@@ -8,6 +8,7 @@
 #include <cef_client.h>
 #include <cef_render_handler.h>
 #include <cef_life_span_handler.h>
+#include <cef_load_handler.h>
 #include <wrapper/cef_helpers.h>
 
 #include "sdl_keyboard_utils.h"
@@ -81,7 +82,8 @@ private:
 // for manual render handler
 class BrowserClient :
     public CefClient,
-    public CefLifeSpanHandler
+    public CefLifeSpanHandler,
+    public CefLoadHandler
 {
 public:
     BrowserClient(CefRefPtr<CefRenderHandler> ptr) :
@@ -90,6 +92,11 @@ public:
     }
 
     virtual CefRefPtr<CefLifeSpanHandler> GetLifeSpanHandler()
+    {
+        return this;
+    }
+
+    virtual CefRefPtr<CefLoadHandler> GetLoadHandler()
     {
         return this;
     }
@@ -131,14 +138,42 @@ public:
     {
     }
 
+    void OnLoadEnd(CefRefPtr<CefBrowser> browser, CefRefPtr<CefFrame> frame, int httpStatusCode)
+    {
+        std::cout << "OnLoadEnd(" << httpStatusCode << ")" << std::endl;
+        loaded = true;
+    }
+
+    bool OnLoadError(CefRefPtr<CefBrowser> browser, CefRefPtr<CefFrame> frame, CefLoadHandler::ErrorCode errorCode, const CefString & failedUrl, CefString & errorText)
+    {
+        std::cout << "OnLoadError()" << std::endl;
+        loaded = true;
+    }
+
+    void OnLoadingStateChange(CefRefPtr<CefBrowser> browser, bool isLoading, bool canGoBack, bool canGoForward)
+    {
+        std::cout << "OnLoadingStateChange()" << std::endl;
+    }
+
+    void OnLoadStart(CefRefPtr<CefBrowser> browser, CefRefPtr<CefFrame> frame)
+    {
+        std::cout << "OnLoadStart()" << std::endl;
+    }
+
     bool closeAllowed() const
     {
         return closing;
     }
 
+    bool isLoaded() const
+    {
+        return loaded;
+    }
+
 private:
     int browser_id;
     bool closing = false;
+    bool loaded = false;
     CefRefPtr<CefRenderHandler> handler;
 
     IMPLEMENT_REFCOUNTING(BrowserClient);
@@ -259,6 +294,7 @@ int main(int argc, char * argv[])
             }
 
             bool shutdown = false;
+            bool js_executed = false;
             while (!browserClient->closeAllowed())
             {
                 // send events to browser
@@ -381,6 +417,14 @@ int main(int argc, char * argv[])
                             }
                             break;
                     }
+                }
+
+                if (!js_executed && browserClient->isLoaded())
+                {
+                    js_executed = true;
+
+                    CefRefPtr<CefFrame> frame = browser->GetMainFrame();
+                    frame->ExecuteJavaScript("alert('ExecuteJavaScript works!');", frame->GetURL(), 0);
                 }
 
                 // let browser process events
